@@ -143,13 +143,22 @@ def procesar_cuenta (ArchivoNombre, nombre_hoja):
 ventana = Tk()
 ventana.title("Programa Auditor")
 ventana.geometry("400x280")
+
 boton_rrhh = Button(ventana, text="Recursos Humanos", command=lambda:  procesar_cuenta (ArchivoNombre, nombres_hojas[0]))
 boton_rrhh.pack(pady=5)
 
 boton_gastos = Button(ventana, text="Gastos de Operación", command=lambda: procesar_cuenta (ArchivoNombre, nombres_hojas[1]))
 boton_gastos.pack(pady=5)
 
-# ... y así para Pers.Juridica, Arriendo, Servicios Básicos
+boton_gastos = Button(ventana, text="Personas Jirídicas", command=lambda: procesar_cuenta (ArchivoNombre, nombres_hojas[2]))
+boton_gastos.pack(pady=5)
+
+boton_gastos = Button(ventana, text="Arriendos", command=lambda: procesar_cuenta (ArchivoNombre, nombres_hojas[3]))
+boton_gastos.pack(pady=5)
+
+boton_gastos = Button(ventana, text="Servicios Básicos", command=lambda: procesar_cuenta (ArchivoNombre, nombres_hojas[4]))
+boton_gastos.pack(pady=5)
+# ... y así para  Arriendo, Servicios Básicos
 
 ventana.mainloop()
 

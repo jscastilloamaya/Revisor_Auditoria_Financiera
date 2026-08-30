@@ -35,6 +35,37 @@ def variables_hoja(hoja: str)-> list:
         "Fecha Emisión Documento",
         "Fecha Pago Real",
         "Gastos de Operación"]
+    if hoja =="Pers.Juridica":
+            colum_nombres= [
+            "Glosa / Justificación",
+            "RUT Contribuyente",
+            "RUT Proveedor",
+            "Monto Total Documento (V. Neto)",
+            "Valor Rendido al Proyecto",
+            "Fecha Emisión Documento",
+            "Fecha Pago Real",
+            "Pers.Juridica"]
+    if hoja =="Arriendo":
+            colum_nombres= [
+            "Glosa / Justificación",
+            "RUT Contribuyente",
+            "RUT Proveedor",
+            "Monto Total Documento (V. Neto)",
+            "Valor Rendido al Proyecto",
+            "Fecha Emisión Documento",
+            "Fecha Pago Real",
+            "Arriendo"]
+    if hoja =="Servicios Básicos":
+            colum_nombres=[
+            "Glosa / Justificación",
+            "RUT Contribuyente",
+            "RUT Proveedor",
+            "Monto Total Documento (V. Neto)",
+            "Valor Rendido al Proyecto",
+            "Fecha Emisión Documento",
+            "Fecha Pago Real",
+            "Servicios Básicos"]
+
     return colum_nombres
 
 # %% Eliminar columnas sobrantes
