@@ -76,13 +76,25 @@ def cargar_hoja_excel(ArchivoNombre, nombre_hoja):
     raise SystemExit("❌ Ocurrió un error al leer el Excel.")
 
 
-### 
+###Ventana de Auditoria  
 
-def abrir_ventana_resultados(ventana_padre, titulo_hoja):
-    """Crea una ventana secundaria con un Text con scroll, y devuelve el widget Text."""
+
+def exportar_csv(df, nombre_hoja, archivo_origen):
+    try:
+        ruta_csv = bka.convertir_csv(df, nombre_hoja, archivo_origen)
+        messagebox.showinfo("Exportación exitosa", f"Archivo guardado en:\n{ruta_csv}")
+    except Exception as e:
+        messagebox.showerror("Error al exportar", f"No se pudo generar el CSV:\n{e}")
+
+
+def abrir_ventana_resultados(ventana_padre, titulo_hoja, df, archivo_origen):
     top = Toplevel(ventana_padre)
     top.title(f"Resultados - {titulo_hoja}")
-    top.geometry("700x500")
+    top.geometry("700x550")
+
+    boton_exportar = Button(top, text="Exportar a CSV",
+                             command=lambda: exportar_csv(df, titulo_hoja, archivo_origen))
+    boton_exportar.pack(pady=5)
 
     scrollbar = Scrollbar(top)
     scrollbar.pack(side="right", fill="y")
@@ -96,27 +108,13 @@ def abrir_ventana_resultados(ventana_padre, titulo_hoja):
 
     return texto
 
-
-def agregar_resultado_tabla(texto_widget, tabla, nombre_columna):
+def agregar_resultado_tabla(texto_widget, tabla, titulo):
     """Inserta el resultado de una validación (tabla del backend) en el Text."""
     if tabla.empty:
-        texto_widget.insert(END, f"✅ Todas las filas de '{nombre_columna}' cumplen: exactamente 9 caracteres alfanuméricos.\n\n", "ok")
+        texto_widget.insert(END, f"✅ Todo correcto: '{titulo}'\n\n", "ok")
     else:
-        texto_widget.insert(END, f"⚠️ Por favor verificar los RUT que no tienen 9 caracteres en '{nombre_columna}'\n", "warn")
+        texto_widget.insert(END, f"⚠️ Por favor revisar: {titulo}\n", "warn")
         texto_widget.insert(END, tabla.to_string(index=False) + "\n\n")
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -132,8 +130,8 @@ def procesar_cuenta (ArchivoNombre, nombre_hoja):
             f"La hoja '{nombre_hoja}' se encuentra vacía."
             )
         elif ConDatos == True:
-            resultados_auditoria = bka.auditar_hoja(dfcuenta, columnas_nombres[1], columnas_nombres[2], "", "", "", "", nombre_hoja)
-            texto_widget = abrir_ventana_resultados(ventana, nombre_hoja)
+            resultados_auditoria = bka.auditar_hoja(dfcuenta, columnas_nombres[1], columnas_nombres[2], columnas_nombres[3], columnas_nombres[4],  columnas_nombres[5],  columnas_nombres[6], nombre_hoja)
+            texto_widget = abrir_ventana_resultados(ventana, nombre_hoja, dfcuenta, ArchivoNombre)
             for titulo, tabla in resultados_auditoria:
                 agregar_resultado_tabla(texto_widget, tabla, titulo)
     return
@@ -148,7 +146,7 @@ ventana.geometry("400x280")
 boton_rrhh = Button(ventana, text="Recursos Humanos", command=lambda:  procesar_cuenta (ArchivoNombre, nombres_hojas[0]))
 boton_rrhh.pack(pady=5)
 
-boton_gastos = Button(ventana, text="Gastos de Operación", command=lambda: al_hacer_clic_hoja("Gastos de Operación"))
+boton_gastos = Button(ventana, text="Gastos de Operación", command=lambda: procesar_cuenta (ArchivoNombre, nombres_hojas[1]))
 boton_gastos.pack(pady=5)
 
 # ... y así para Pers.Juridica, Arriendo, Servicios Básicos

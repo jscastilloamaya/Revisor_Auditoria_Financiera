@@ -8,7 +8,8 @@ import pandas as pd
 import numpy as np
 import re
 from pandas.api.types import is_numeric_dtype
-import math
+#import math
+import os
 import unicodedata
 HOJAS_CONFIG=["RRHH", "Gastos de Operación", "Pers.Juridica", "Arriendo", "Servicios Básicos"]
 
@@ -24,6 +25,16 @@ def variables_hoja(hoja: str)-> list:
         "Fecha Emision Documento",
         "Fecha de Pago Real",
         "RRHH"]
+    if hoja =="Gastos de Operación":
+        colum_nombres= [
+        "Glosa / Justificación",
+        "RUT Contribuyente",
+        "RUT Proveedor",
+        "Monto Total Documento (V. Neto)",
+        "Valor Rendido al Proyecto",
+        "Fecha Emisión Documento",
+        "Fecha Pago Real",
+        "Gastos de Operación"]
     return colum_nombres
 
 # %% Eliminar columnas sobrantes
@@ -294,6 +305,151 @@ def imprimir_filas_invalidas_alnum9(df: pd.DataFrame, columna: str, columnas_tab
     tabla = pd.DataFrame(filas_invalidas)
     return tabla    
 
+
+# %% Verificar Fechas
+def comparar_fechas(df: pd.DataFrame, col_x: str, col_y: str) -> pd.DataFrame:
+    """
+    Verifica que la fecha de emisión (col_x) no sea mayor a la fecha de pago (col_y).
+    Retorna un DataFrame con las filas inválidas, listo para que el frontend lo muestre.
+    """
+    df[col_x] = pd.to_datetime(df[col_x])
+    df[col_y] = pd.to_datetime(df[col_y])
+
+    columnas_tabla = [col_x, col_y, "N° Documento"]
+    for c in columnas_tabla:
+        if c not in df.columns:
+            raise KeyError(f"La columna '{c}' no existe en el DataFrame.")
+
+    mask = df[col_x] > df[col_y]
+    tabla = df.loc[mask, columnas_tabla].copy()
+
+    return tabla
+
+# %% Verificar montos totales y rendidos
+def comparar_montos(df: pd.DataFrame, col_x: str, col_y: str) -> pd.DataFrame:
+    """
+    Verifica que el monto de la factura/invoice/liquidación (col_x) no sea menor
+    al valor rendido (col_y). Retorna un DataFrame con las filas inválidas,
+    listo para que el frontend lo muestre.
+    """
+    df[col_x] = pd.to_numeric(
+        df[col_x]
+        .astype(str)
+        .str.replace(r"[^\d\.\,\-]", "", regex=True)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False),
+        errors="coerce"
+    )
+    df[col_y] = pd.to_numeric(
+        df[col_y]
+        .astype(str)
+        .str.replace(r"[^\d\.\,\-]", "", regex=True)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False),
+        errors="coerce"
+    )
+
+    columnas_tabla = [col_x, col_y, "N° Documento"]
+    for c in columnas_tabla:
+        if c not in df.columns:
+            raise KeyError(f"La columna '{c}' no existe en el DataFrame.")
+
+    mask = df[col_x] < df[col_y]
+    tabla = df.loc[mask, columnas_tabla].copy()
+
+    return tabla
+
+# %%#Verificar horas contratadas y rendidas
+
+def comparar_horas(df: pd.DataFrame, col_x: str, col_y: str) -> pd.DataFrame:
+    """
+    Verifica que las horas contratadas (col_x) no sean menores a las horas
+    dedicadas al proyecto (col_y). Retorna un DataFrame con las filas inválidas,
+    listo para que el frontend lo muestre.
+    """
+    df[col_x] = pd.to_numeric(
+        df[col_x]
+        .astype(str)
+        .str.replace(r"[^\d\.\,\-]", "", regex=True)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False),
+        errors="coerce"
+    )
+    df[col_y] = pd.to_numeric(
+        df[col_y]
+        .astype(str)
+        .str.replace(r"[^\d\.\,\-]", "", regex=True)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False),
+        errors="coerce"
+    )
+
+    columnas_tabla = [col_x, col_y, "N° Documento"]
+    for c in columnas_tabla:
+        if c not in df.columns:
+            raise KeyError(f"La columna '{c}' no existe en el DataFrame.")
+
+    mask = df[col_x] < df[col_y]
+    tabla = df.loc[mask, columnas_tabla].copy()
+
+    return tabla
+# %% Valores autorizados en las listas de SGP
+
+def validar_columna(df: pd.DataFrame, Hoja: str) -> list:
+    """
+    Verifica que Cuenta, Tipo documento y Forma de Pago tengan valores permitidos.
+    Retorna una lista de tuplas (titulo, tabla), lista para fusionarse en auditar_hoja.
+    """
+    Forma_Pago = ["Cheque/Vale vista", "Transferencia electrónica", "Tarjeta de Crédito"]
+    RRHH_Tipo_documento = ["LIQ. SUELDO", "BOLETA HONORARIOS"]
+    General_Tipo_documento = ["Factura", "Invoice", "Boleta"]
+
+    if Hoja == "RRHH":
+        valores_permitidos = RRHH_Tipo_documento
+        Valores_Cuenta = ["RRHH"]
+    elif Hoja == "Gastos de Operación":
+        valores_permitidos = General_Tipo_documento
+        Valores_Cuenta = ["GASTOS DIRECTOS"]
+    elif Hoja == "Pers.Juridica":
+        valores_permitidos = General_Tipo_documento
+        Valores_Cuenta = ["PERSONA JURÍDICA"]
+    elif Hoja == "Arriendo":
+        valores_permitidos = General_Tipo_documento
+        Valores_Cuenta = ["GASTOS DE ARRIENDO"]
+    elif Hoja == "Servicios Básicos":
+        valores_permitidos = General_Tipo_documento
+        Valores_Cuenta = ["SERVICIOS BÁSICOS"]
+
+    resultados = []
+
+    # --- Cuenta ---
+    invalidos_cuenta = df[~df["Cuenta"].isin(Valores_Cuenta)]["Cuenta"].unique()
+    titulo_cuenta = f"Para esta hoja los valores permitidos en 'Cuenta' son {Valores_Cuenta} y no {list(invalidos_cuenta)}"
+    tabla_cuenta = pd.DataFrame({
+        "Valor encontrado": invalidos_cuenta,
+        "Error": [f"No está en los valores permitidos: {Valores_Cuenta}"] * len(invalidos_cuenta)
+    })
+    resultados.append((titulo_cuenta, tabla_cuenta))
+
+    # --- Tipo documento ---
+    invalidos_tipo = df[~df["Tipo documento"].isin(valores_permitidos)]["Tipo documento"].unique()
+    titulo_tipo = f"Para esta hoja los valores permitidos en 'Tipo documento' son {valores_permitidos} y no {list(invalidos_tipo)}"
+    tabla_tipo = pd.DataFrame({
+        "Valor encontrado": invalidos_tipo,
+        "Error": [f"No está en los valores permitidos: {valores_permitidos}"] * len(invalidos_tipo)
+    })
+    resultados.append((titulo_tipo, tabla_tipo))
+
+    # --- Forma de Pago ---
+    invalidos_pago = df[~df["Forma de Pago"].isin(Forma_Pago)]["Forma de Pago"].unique()
+    titulo_pago = f"Para esta hoja los valores permitidos en 'Forma de Pago' son {Forma_Pago} y no {list(invalidos_pago)}"
+    tabla_pago = pd.DataFrame({
+        "Valor encontrado": invalidos_pago,
+        "Error": [f"No está en los valores permitidos: {Forma_Pago}"] * len(invalidos_pago)
+    })
+    resultados.append((titulo_pago, tabla_pago))
+
+    return resultados
 # %% Modulo de Auditoria de columnas 
 
 def auditar_hoja(df: pd.DataFrame, Rut1: str, Rut2: str, Monto1: str, Monto2: str, FechaEmitido: str, FechaPagado: str, Hoja: str  ) -> pd.DataFrame:
@@ -306,4 +462,30 @@ def auditar_hoja(df: pd.DataFrame, Rut1: str, Rut2: str, Monto1: str, Monto2: st
     Errores_RUT2 = imprimir_filas_invalidas_alnum9(df, Rut2, columnas_tabla=[Rut2])
     resultados.append((Rut2, Errores_RUT2))
     
+    Errores_Fechas=comparar_fechas(df, FechaEmitido, FechaPagado)
+    resultados.append(("La fecha de emisión no puede ser mayor a la fecha de Pago", Errores_Fechas))
+    
+    Errores_Montos = comparar_montos(df, Monto1, Monto2)
+    resultados.append(("El monto de la factura/invoice/liquidación no puede ser menor al rendido", Errores_Montos))
+    if Hoja == "RRHH":
+        Errores_Horas = comparar_horas(df, "Total de horas contratadas.", "Horas dedicadas al proyecto ")
+        resultados.append(("Las horas contratadas no pueden ser menores a las rendidas", Errores_Horas))
+    
+    resultados_columna = validar_columna(df, Hoja)
+    resultados.extend(resultados_columna)
+        
     return resultados
+
+# %% Convertir a CSV seprado por ;
+
+
+def convertir_csv(df: pd.DataFrame, Hoja: str, ArchivoNombre: str) -> str:
+    """
+    Exporta el DataFrame a CSV en la misma carpeta que el Excel original.
+    Retorna la ruta completa del archivo generado.
+    """
+    carpeta = os.path.dirname(ArchivoNombre)
+    nombre_base = os.path.splitext(os.path.basename(ArchivoNombre))[0]
+    ruta_csv = os.path.join(carpeta, f"{Hoja}_{nombre_base}.csv")
+    df.to_csv(ruta_csv, sep=';', index=False, encoding='utf-8-sig', date_format='%d/%m/%Y')
+    return ruta_csv
