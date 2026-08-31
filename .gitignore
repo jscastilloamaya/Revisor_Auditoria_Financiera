@@ -1,0 +1,5 @@
+Audito-Fiscal/dist/
+Audito-Fiscal/build/
+Audito-Fiscal/__pycache__/
+Develop
+*.pyc
